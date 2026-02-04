@@ -3,6 +3,23 @@
 // File ini menyimpan struktur project agar bisa didownload dari browser
 
 export const PROJECT_FILES: Record<string, string> = {
+  "vite.config.ts": `import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})`,
+  "tsconfig.node.json": `{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.ts"]
+}`,
   "netlify.toml": `[build]
   command = "npm run build"
   publish = "dist"
@@ -72,12 +89,6 @@ export const PROJECT_FILES: Record<string, string> = {
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }`,
-  "vite.config.ts": `import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-})`,
   "index.html": `<!DOCTYPE html>
 <html lang="id">
 <head>
