@@ -1,6 +1,6 @@
 
 // Data Source Code untuk Fitur Download ZIP
-// File ini menyimpan struktur project agar bisa didownload dari browser
+// Diupdate untuk support GitHub Pages Deployment
 
 export const PROJECT_FILES: Record<string, string> = {
   "vite.config.ts": `import { defineConfig } from 'vite'
@@ -9,6 +9,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './', // PENTING: Agar jalan di GitHub Pages (relative path)
 })`,
   "tsconfig.node.json": `{
   "compilerOptions": {
@@ -20,14 +21,6 @@ export default defineConfig({
   },
   "include": ["vite.config.ts"]
 }`,
-  "netlify.toml": `[build]
-  command = "npm run build"
-  publish = "dist"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200`,
   "metadata.json": `{
   "name": "Yakult Shop Pro & Admin",
   "description": "Premium Yakult Ordering Platform with Dynamic QRIS and Pro Admin Panel",
@@ -44,7 +37,9 @@ export default defineConfig({
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
@@ -64,7 +59,8 @@ export default defineConfig({
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
-    "vite": "^5.2.0"
+    "vite": "^5.2.0",
+    "gh-pages": "^6.1.1"
   }
 }`,
   "tsconfig.json": `{
@@ -124,8 +120,8 @@ export default defineConfig({
 </body>
 </html>`,
   "api.php": `<?php
-// NOTE: This file will NOT run on Netlify/Vercel (Frontend Hosting).
-// The app automatically falls back to 'localStorage' mode if API is unreachable.
+// NOTE: File PHP tidak akan berjalan di GitHub Pages (Static Hosting).
+// App akan otomatis menggunakan mode localStorage.
 ob_start(); error_reporting(0); ini_set('display_errors', 0); header("Access-Control-Allow-Origin: *"); header("Content-Type: application/json; charset=UTF-8");
 echo json_encode(["status" => "success", "message" => "API Placeholder for Static Host"]);
 ?>`,
