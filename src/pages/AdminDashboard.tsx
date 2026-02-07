@@ -5,7 +5,7 @@ import {
   Wallet, Check, X, Eye, 
   MapPin, MessageCircle, Menu, Search, Download, Wifi, Package, Loader2,
   Settings, Save, PlusCircle, Edit, Database, Clock, Server, Copy, AlertCircle, UploadCloud, Image as ImageIcon, QrCode, ChevronDown, CheckCircle, XCircle,
-  Store, Trash2, BookOpen, Star, HelpCircle, Info, Image as ImgIcon, Plus, ChevronUp, MoreHorizontal, FileCode2
+  Store, Trash2, BookOpen, Star, HelpCircle, Info, Image as ImgIcon, Plus, ChevronUp, MoreHorizontal, FileCode2, Sparkles, Brain
 } from 'lucide-react';
 import { Transaction, LossRecord, Product, StoreSettings, StoreContent, Testimonial, GalleryItem, FaqItem, InfoSection } from '../types';
 import { ADMIN_CREDENTIALS, COUNTRY_CODES } from '../constants';
@@ -46,11 +46,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
   
-  const [activeTab, setActiveTab] = useState<'dash' | 'active' | 'history' | 'losses' | 'products' | 'settings' | 'content'>('dash');
+  const [activeTab, setActiveTab] = useState<'dash' | 'active' | 'history' | 'losses' | 'products' | 'settings' | 'content' | 'ai'>('dash');
   const [contentSubTab, setContentSubTab] = useState<'testimoni' | 'gallery' | 'faq' | 'info'>('testimoni');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isGlobalLoading, setIsGlobalLoading] = useState(false); 
   const [isZipping, setIsZipping] = useState(false);
+  
+  // AI States
+  const [aiResponse, setAiResponse] = useState('');
+  const [isAiThinking, setIsAiThinking] = useState(false);
   
   const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
   const [cancelNotification, setCancelNotification] = useState<string | null>(null);
@@ -147,7 +151,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return {
       revenue, fees, totalItems, loss: totalLoss,
       net: revenue + fees - totalLoss,
-      pending: activeTransactions.length
+      pending: activeTransactions.length,
+      txCount: confirmed.length
     };
   }, [activeTransactions, historyTransactions, losses]);
 
@@ -209,6 +214,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const showToast = (msg: string, type: 'success' | 'error') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // --- AI FUNCTION ---
+  const handleAskAI = async () => {
+      setIsAiThinking(true);
+      setAiResponse('');
+      
+      const prompt = `
+          Analisa data toko saya berikut ini dan berikan saran bisnis yang singkat, padat, dan memotivasi.
+          
+          DATA TOKO:
+          - Nama: ${settings.storeName}
+          - Total Pendapatan Bersih: ${formatCurrency(stats.net)}
+          - Total Produk Terjual: ${stats.totalItems} unit
+          - Jumlah Transaksi Sukses: ${stats.txCount}
+          - Total Kerugian (Barang Rusak/Hilang): ${formatCurrency(stats.loss)}
+          - Rating Toko: ${content.shopRating} / 5.0
+          
+          Berikan output dalam format Markdown yang rapi. Fokus pada:
+          1. Evaluasi performa penjualan.
+          2. Saran untuk meningkatkan rating (jika dibawah 5) atau mempertahankannya.
+          3. Strategi mengurangi kerugian.
+          4. Ide promosi kreatif untuk produk Yakult.
+      `;
+
+      try {
+          // Call Vercel Serverless Function
+          const res = await fetch('/api/gemini', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt })
+          });
+          
+          const data = await res.json();
+          
+          if (res.ok && data.text) {
+              setAiResponse(data.text);
+          } else {
+              setAiResponse("Maaf, fitur AI belum dikonfigurasi dengan benar di Vercel. Pastikan GEMINI_API_KEY sudah dimasukkan di Environment Variables.");
+          }
+      } catch (e) {
+          setAiResponse("Gagal menghubungi server AI. Pastikan internet stabil.");
+      } finally {
+          setIsAiThinking(false);
+      }
   };
 
   // --- PRODUCT LOGIC ---
@@ -434,9 +484,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         zip.file(filename, content);
       });
       
-      // Add current AdminDashboard code to ensure we have the latest version in the zip
-      // (Optional self-preservation)
-      
       const blob = await zip.generateAsync({type:"blob"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -493,7 +540,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className={`fixed inset-y-0 left-0 w-72 bg-slate-900 text-white p-6 flex flex-col z-50 transition-transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0`}>
         <h1 className="text-2xl font-black text-rose-500 mb-6 px-2">ADMIN</h1>
         <nav className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
-          {[{ id: 'dash', label: 'Dashboard', icon: LayoutDashboard }, { id: 'active', label: 'Pesanan', icon: ShoppingBag, badge: stats.pending }, { id: 'products', label: 'Produk', icon: Package }, { id: 'content', label: 'Konten', icon: BookOpen }, { id: 'settings', label: 'Pengaturan', icon: Settings }, { id: 'history', label: 'Riwayat', icon: History }, { id: 'losses', label: 'Kerugian', icon: TrendingDown }].map(item => (
+          {[
+            { id: 'dash', label: 'Dashboard', icon: LayoutDashboard }, 
+            { id: 'active', label: 'Pesanan', icon: ShoppingBag, badge: stats.pending }, 
+            { id: 'products', label: 'Produk', icon: Package },
+            { id: 'ai', label: 'AI Consultant', icon: Brain }, // NEW TAB
+            { id: 'content', label: 'Konten', icon: BookOpen }, 
+            { id: 'settings', label: 'Pengaturan', icon: Settings }, 
+            { id: 'history', label: 'Riwayat', icon: History }, 
+            { id: 'losses', label: 'Kerugian', icon: TrendingDown }
+            ].map(item => (
             <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsSidebarOpen(false); }} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === item.id ? 'bg-rose-600 text-white' : 'text-slate-400 hover:bg-white/5'}`}>
               <div className="flex items-center gap-3"><item.icon size={18}/> {item.label}</div>{item.badge ? <span className="bg-white text-rose-600 text-[10px] px-2 py-0.5 rounded-full font-black">{item.badge}</span> : null}
             </button>
@@ -507,12 +563,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button onClick={() => setShowLossModal(true)} className="w-full py-3 border border-amber-500/30 text-amber-500 rounded-2xl font-bold text-xs">Rugi</button>
             <button onClick={generatePDF} className="w-full py-3 bg-slate-800 text-slate-300 rounded-2xl font-bold text-xs">PDF</button>
           </div>
-          
-          {/* NEW BUTTON: Download Source Code */}
           <button onClick={handleDownloadSource} disabled={isZipping} className="w-full py-3 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-2xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2">
             {isZipping ? <Loader2 size={16} className="animate-spin"/> : <><FileCode2 size={16}/> DOWNLOAD SOURCE</>}
           </button>
-
           <button onClick={handleClearData} disabled={isGlobalLoading} className="w-full py-3 border border-rose-500/20 text-rose-500/50 rounded-2xl font-bold text-xs">RESET</button>
           <button onClick={handleLogout} className="w-full py-3 bg-white/5 text-slate-500 rounded-2xl font-bold text-xs">LOGOUT</button>
         </div>
@@ -523,6 +576,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'dash' && (<div className="grid grid-cols-2 lg:grid-cols-4 gap-4"><div className="bg-white p-6 rounded-[32px] shadow-sm"><p className="text-xs text-slate-400 font-bold uppercase">Pendapatan</p><p className="text-2xl font-black text-slate-800">{formatCurrency(stats.revenue)}</p></div><div className="bg-white p-6 rounded-[32px] shadow-sm"><p className="text-xs text-slate-400 font-bold uppercase">Bersih</p><p className="text-2xl font-black text-emerald-600">{formatCurrency(stats.net)}</p></div></div>)}
         {activeTab === 'active' && (<div className="space-y-4">{activeTransactions.map(t => (<div key={t.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100"><div className="flex justify-between mb-2"><h3 className="font-bold">{t.customer.name}</h3><span className="text-rose-600 font-black">{formatCurrency(t.total)}</span></div><div className="flex gap-2"><button onClick={() => updateStatus(t.id, 'confirmed')} className="flex-1 py-2 bg-emerald-500 text-white rounded-xl font-bold text-sm">Terima</button><button onClick={() => updateStatus(t.id, 'rejected')} className="flex-1 py-2 bg-rose-500 text-white rounded-xl font-bold text-sm">Tolak</button></div></div>))}</div>)}
         {activeTab === 'products' && (<div><button onClick={() => openProductModal()} className="mb-6 px-6 py-3 bg-rose-600 text-white rounded-2xl font-bold">+ Tambah</button><div className="grid grid-cols-1 md:grid-cols-3 gap-4">{products.map(p => (<div key={p.id} className="bg-white p-4 rounded-[24px] shadow-sm"><p className="font-bold">{p.name}</p><p className="text-rose-600 font-bold">{formatCurrency(p.price)}</p><div className="mt-2 flex gap-2"><button onClick={() => openProductModal(p)} className="text-blue-500 font-bold text-xs">Edit</button><button onClick={() => handleDeleteProduct(p.id)} className="text-rose-500 font-bold text-xs">Hapus</button></div></div>))}</div></div>)}
+        
+        {/* AI CONSULTANT TAB */}
+        {activeTab === 'ai' && (
+            <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
+                <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-10 rounded-[40px] text-white mb-8 shadow-2xl shadow-indigo-200">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md"><Brain size={32} /></div>
+                        <h2 className="text-3xl font-black">AI Consultant</h2>
+                    </div>
+                    <p className="text-indigo-100 mb-8 max-w-lg leading-relaxed">Analisis performa toko Anda secara instan menggunakan kecerdasan buatan Google Gemini. Dapatkan saran strategi untuk meningkatkan penjualan.</p>
+                    <button onClick={handleAskAI} disabled={isAiThinking} className="px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-3 active:scale-95">
+                        {isAiThinking ? <Loader2 className="animate-spin"/> : <><Sparkles size={20}/> ANALISA TOKO SAYA</>}
+                    </button>
+                </div>
+
+                {aiResponse && (
+                    <div className="bg-white p-8 rounded-[40px] shadow-xl border border-indigo-50 animate-in slide-in-from-bottom-8 duration-700">
+                        <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2"><Sparkles className="text-amber-400" size={24}/> Hasil Analisis AI</h3>
+                        <div className="prose prose-slate prose-sm max-w-none">
+                            <pre className="whitespace-pre-wrap font-sans text-slate-600 leading-relaxed text-sm bg-transparent border-none p-0">
+                                {aiResponse}
+                            </pre>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+        
         {activeTab === 'settings' && (<div className="bg-white p-8 rounded-[32px]"><input value={settingsForm.storeName} onChange={e => setSettingsForm({...settingsForm, storeName: e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold mb-4" /><input type="file" onChange={handleQrisUpload} className="mb-4"/><button onClick={handleSaveSettings} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold">Simpan</button></div>)}
         {activeTab === 'content' && (<div className="space-y-4"><div className="flex gap-2"><button onClick={() => setContentSubTab('testimoni')} className="px-4 py-2 bg-white rounded-xl font-bold text-xs">Testimoni</button></div>{contentSubTab === 'testimoni' && (<div><button onClick={() => setShowTestiModal(true)} className="mb-4 text-xs font-bold text-rose-500">+ Tambah</button>{content.testimonials.map(t => (<div key={t.id} className="bg-white p-4 rounded-2xl mb-2"><p className="font-bold">{t.name}</p><p className="text-xs text-slate-500">{t.text}</p></div>))}</div>)}</div>)}
         {(activeTab === 'history' || activeTab === 'losses') && (<div className="bg-white p-6 rounded-[32px]">{activeTab === 'history' ? historyTransactions.map(t=>(<div key={t.id} className="border-b py-2">{t.customer.name} - {t.status}</div>)) : losses.map(l=>(<div key={l.id}>{l.description}: {l.amount}</div>))}</div>)}
