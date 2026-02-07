@@ -116,7 +116,8 @@ export default defineConfig({
     "noFallthroughCasesInSwitch": true,
     "types": ["node"]
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }`,
   "index.html": `<!DOCTYPE html>
 <html lang="id">
