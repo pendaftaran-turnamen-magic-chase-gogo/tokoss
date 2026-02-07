@@ -1,15 +1,31 @@
 
 // Data Source Code untuk Fitur Download ZIP
-// Diupdate untuk support GitHub Pages Deployment
+// Diupdate untuk support Firebase Hosting (Google Cloud)
 
 export const PROJECT_FILES: Record<string, string> = {
+  "firebase.json": `{
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}`,
   "vite.config.ts": `import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // PENTING: Agar jalan di GitHub Pages (relative path)
+  base: '/', // Gunakan absolute path untuk Firebase
 })`,
   "tsconfig.node.json": `{
   "compilerOptions": {
@@ -21,14 +37,6 @@ export default defineConfig({
   },
   "include": ["vite.config.ts"]
 }`,
-  "metadata.json": `{
-  "name": "Yakult Shop Pro & Admin",
-  "description": "Premium Yakult Ordering Platform with Dynamic QRIS and Pro Admin Panel",
-  "requestFramePermissions": [
-    "camera",
-    "geolocation"
-  ]
-}`,
   "package.json": `{
   "name": "yakult-shop-pro",
   "private": true,
@@ -38,8 +46,7 @@ export default defineConfig({
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "firebase deploy"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
@@ -60,7 +67,7 @@ export default defineConfig({
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
     "vite": "^5.2.0",
-    "gh-pages": "^6.1.1"
+    "firebase-tools": "^13.0.0"
   }
 }`,
   "tsconfig.json": `{
@@ -119,12 +126,6 @@ export default defineConfig({
     <script type="module" src="/src/index.tsx"></script>
 </body>
 </html>`,
-  "api.php": `<?php
-// NOTE: File PHP tidak akan berjalan di GitHub Pages (Static Hosting).
-// App akan otomatis menggunakan mode localStorage.
-ob_start(); error_reporting(0); ini_set('display_errors', 0); header("Access-Control-Allow-Origin: *"); header("Content-Type: application/json; charset=UTF-8");
-echo json_encode(["status" => "success", "message" => "API Placeholder for Static Host"]);
-?>`,
   "src/index.tsx": `import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
