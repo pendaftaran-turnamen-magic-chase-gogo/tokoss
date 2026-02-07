@@ -1,12 +1,11 @@
 
 // Data Source Code untuk Fitur Download ZIP
-// Diupdate untuk support Vercel AI
+// Diupdate untuk support Vercel AI dan memperbaiki versi @google/genai
 
 export const PROJECT_FILES: Record<string, string> = {
   "api/gemini.js": `import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req, res) {
-  // Setup CORS agar bisa diakses dari frontend
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -42,8 +41,8 @@ export default async function handler(req, res) {
     const ai = new GoogleGenAI({ apiKey: apiKey });
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-latest',
-      contents: prompt,
+      model: 'gemini-3-flash-preview',
+      contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Anda adalah Konsultan Bisnis Profesional khusus untuk distributor Yakult.",
       }
@@ -75,7 +74,7 @@ export default async function handler(req, res) {
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "jszip": "^3.10.1",
-    "@google/genai": "^0.1.1"
+    "@google/genai": "^1.40.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

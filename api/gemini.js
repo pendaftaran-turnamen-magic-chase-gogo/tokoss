@@ -21,7 +21,6 @@ export default async function handler(req, res) {
 
   try {
     // Mengambil API Key dari Environment Variable Vercel
-    // Mendukung GEMINI_API_KEY (sesuai screenshot user) atau API_KEY (standar)
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
     if (!apiKey) {
@@ -38,16 +37,19 @@ export default async function handler(req, res) {
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
     
-    // Menggunakan model Gemini Flash untuk respon cepat dan cerdas
+    // Menggunakan model gemini-3-flash-preview sesuai instruksi untuk tugas teks dasar/cepat
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-latest',
-      contents: prompt,
+      model: 'gemini-3-flash-preview',
+      contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: "Anda adalah Konsultan Bisnis Profesional khusus untuk distributor Yakult. Berikan analisis yang tajam, saran praktis, dan nada bicara yang menyemangati pemilik toko.",
       }
     });
 
-    return res.status(200).json({ text: response.text });
+    // Mengambil teks menggunakan properti .text (bukan metode .text())
+    const outputText = response.text;
+
+    return res.status(200).json({ text: outputText });
 
   } catch (error) {
     console.error("Gemini API Error:", error);
