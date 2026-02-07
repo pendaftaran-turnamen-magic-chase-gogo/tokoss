@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req, res) {
-  // Setup CORS agar bisa diakses dari frontend
+  // Konfigurasi CORS agar frontend bisa mengakses
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -10,6 +10,7 @@ export default async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
+  // Handle preflight request
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -20,39 +21,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Mengambil API Key dari Environment Variable Vercel
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    // AMBIL API KEY DARI VERCEL ENVIRONMENT VARIABLES
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
+      console.error("API Key Missing in Vercel Environment");
       return res.status(500).json({ 
-        error: 'API Key belum disetting di Vercel. Masuk ke Settings > Environment Variables > Tambahkan GEMINI_API_KEY.' 
+        error: 'Konfigurasi Server Error: API Key belum dipasang di Vercel.' 
       });
     }
 
     const { prompt } = req.body;
 
     if (!prompt) {
-      return res.status(400).json({ error: 'Prompt dibutuhkan' });
+      return res.status(400).json({ error: 'Data prompt tidak ditemukan' });
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
     
-    // Menggunakan model gemini-3-flash-preview sesuai instruksi untuk tugas teks dasar/cepat
+    // Menggunakan model gemini-2.5-flash untuk respon cepat dan hemat kuota
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash', 
       contents: [{ parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: "Anda adalah Konsultan Bisnis Profesional khusus untuk distributor Yakult. Berikan analisis yang tajam, saran praktis, dan nada bicara yang menyemangati pemilik toko.",
+        systemInstruction: "Anda adalah Konsultan Bisnis Profesional khusus untuk pemilik toko kelontong/distributor Yakult. Berikan analisis yang tajam, saran praktis, ramah, dan memotivasi. Gunakan format Markdown.",
       }
     });
 
-    // Mengambil teks menggunakan properti .text (bukan metode .text())
     const outputText = response.text;
-
     return res.status(200).json({ text: outputText });
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return res.status(500).json({ error: 'Gagal menghubungi AI Google.', details: error.message });
+    return res.status(500).json({ error: 'Gagal memproses permintaan AI.', details: error.message });
   }
 }
