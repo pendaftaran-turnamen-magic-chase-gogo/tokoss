@@ -7,11 +7,12 @@ import {
   Settings, Save, PlusCircle, Edit, Database, Clock, Server, Copy, AlertCircle, UploadCloud, Image as ImageIcon, QrCode, ChevronDown, CheckCircle, XCircle,
   Store, Trash2, BookOpen, Star, HelpCircle, Info, Image as ImgIcon, Plus, ChevronUp, MoreHorizontal, FileCode2, Sparkles, Brain
 } from 'lucide-react';
-import { Transaction, LossRecord, Product, StoreSettings, StoreContent, Testimonial, GalleryItem, FaqItem, InfoSection } from '../types';
-import { ADMIN_CREDENTIALS, COUNTRY_CODES } from '../constants';
-import { formatCurrency, compressImage } from '../utils';
+// Corrected imports assuming AdminDashboard is in src/pages/ and types are at root or src/
+import { Transaction, LossRecord, Product, StoreSettings, StoreContent, Testimonial, GalleryItem, FaqItem, InfoSection } from '../../types';
+import { ADMIN_CREDENTIALS, COUNTRY_CODES } from '../../constants';
+import { formatCurrency, compressImage } from '../../utils';
 import JSZip from 'jszip';
-import { PROJECT_FILES } from '../source_code_data';
+import { PROJECT_FILES } from '../../source_code_data';
 
 declare global {
   interface Window {
@@ -98,7 +99,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoForm, setInfoForm] = useState<Partial<InfoSection>>({});
 
-  const filteredCountries = COUNTRY_CODES.filter(c => 
+  const filteredCountries = COUNTRY_CODES.filter((c: typeof COUNTRY_CODES[0]) => 
     c.name.toLowerCase().includes(searchCountry.toLowerCase()) || 
     c.code.includes(searchCountry)
   );
@@ -111,12 +112,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setInfos(content.infos);
 
     if (settings.whatsapp) {
-        const found = COUNTRY_CODES.find(c => settings.whatsapp.startsWith(c.code.replace('+','')));
+        const found = COUNTRY_CODES.find((c: typeof COUNTRY_CODES[0]) => settings.whatsapp.startsWith(c.code.replace('+','')));
         if (found) {
             setWaCountry(found);
             setWaNumber(settings.whatsapp.substring(found.code.replace('+','').length));
         } else if (settings.whatsapp.startsWith('62')) {
-            setWaCountry(COUNTRY_CODES.find(c => c.code === '+62') || COUNTRY_CODES[0]);
+            setWaCountry(COUNTRY_CODES.find((c: typeof COUNTRY_CODES[0]) => c.code === '+62') || COUNTRY_CODES[0]);
             setWaNumber(settings.whatsapp.substring(2));
         } else {
              setWaNumber(settings.whatsapp);
@@ -316,7 +317,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (val.startsWith('0')) val = val.substring(1); 
       setWaNumber(val);
       const cleanPrefix = waCountry.code.replace('+', '');
-      setSettingsForm(prev => ({ ...prev, whatsapp: `${cleanPrefix}${val}` }));
+      setSettingsForm((prev: StoreSettings) => ({ ...prev, whatsapp: `${cleanPrefix}${val}` }));
   };
 
   const selectCountry = (c: typeof COUNTRY_CODES[0]) => {
@@ -324,7 +325,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setIsCountryPickerOpen(false);
       setSearchCountry('');
       const cleanPrefix = c.code.replace('+', '');
-      setSettingsForm(prev => ({ ...prev, whatsapp: `${cleanPrefix}${waNumber}` }));
+      setSettingsForm((prev: StoreSettings) => ({ ...prev, whatsapp: `${cleanPrefix}${waNumber}` }));
   };
 
   const handleSaveSettings = async () => {
@@ -573,7 +574,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 p-6 md:p-12 overflow-y-auto">
-        {activeTab === 'dash' && (<div className="grid grid-cols-2 lg:grid-cols-4 gap-4"><div className="bg-white p-6 rounded-[32px] shadow-sm"><p className="text-xs text-slate-400 font-bold uppercase">Pendapatan</p><p className="text-2xl font-black text-slate-800">{formatCurrency(stats.revenue)}</p></div><div className="bg-white p-6 rounded-[32px] shadow-sm"><p className="text-xs text-slate-400 font-bold uppercase">Bersih</p><p className="text-2xl font-black text-emerald-600">{formatCurrency(stats.net)}</p></div></div>)}
+        {activeTab === 'dash' && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { l: 'Pendapatan', v: formatCurrency(stats.revenue), i: ShoppingBag, c: 'rose' },
+              { l: 'Bersih', v: formatCurrency(stats.net), i: Check, c: 'emerald' },
+            ].map((s: { l: string, v: string, i: any, c: string }, i: number) => (
+              <div key={i} className="bg-white p-6 rounded-[32px] shadow-sm">
+                <p className="text-xs text-slate-400 font-bold uppercase">{s.l}</p>
+                <p className={`text-2xl font-black ${s.c === 'emerald' ? 'text-emerald-600' : 'text-slate-800'}`}>{s.v}</p>
+              </div>
+            ))}
+          </div>
+        )}
         {activeTab === 'active' && (<div className="space-y-4">{activeTransactions.map(t => (<div key={t.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100"><div className="flex justify-between mb-2"><h3 className="font-bold">{t.customer.name}</h3><span className="text-rose-600 font-black">{formatCurrency(t.total)}</span></div><div className="flex gap-2"><button onClick={() => updateStatus(t.id, 'confirmed')} className="flex-1 py-2 bg-emerald-500 text-white rounded-xl font-bold text-sm">Terima</button><button onClick={() => updateStatus(t.id, 'rejected')} className="flex-1 py-2 bg-rose-500 text-white rounded-xl font-bold text-sm">Tolak</button></div></div>))}</div>)}
         {activeTab === 'products' && (<div><button onClick={() => openProductModal()} className="mb-6 px-6 py-3 bg-rose-600 text-white rounded-2xl font-bold">+ Tambah</button><div className="grid grid-cols-1 md:grid-cols-3 gap-4">{products.map(p => (<div key={p.id} className="bg-white p-4 rounded-[24px] shadow-sm"><p className="font-bold">{p.name}</p><p className="text-rose-600 font-bold">{formatCurrency(p.price)}</p><div className="mt-2 flex gap-2"><button onClick={() => openProductModal(p)} className="text-blue-500 font-bold text-xs">Edit</button><button onClick={() => handleDeleteProduct(p.id)} className="text-rose-500 font-bold text-xs">Hapus</button></div></div>))}</div></div>)}
         
@@ -606,11 +619,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         {activeTab === 'settings' && (<div className="bg-white p-8 rounded-[32px]"><input value={settingsForm.storeName} onChange={e => setSettingsForm({...settingsForm, storeName: e.target.value})} className="w-full bg-slate-50 p-4 rounded-2xl font-bold mb-4" /><input type="file" onChange={handleQrisUpload} className="mb-4"/><button onClick={handleSaveSettings} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold">Simpan</button></div>)}
         {activeTab === 'content' && (<div className="space-y-4"><div className="flex gap-2"><button onClick={() => setContentSubTab('testimoni')} className="px-4 py-2 bg-white rounded-xl font-bold text-xs">Testimoni</button></div>{contentSubTab === 'testimoni' && (<div><button onClick={() => setShowTestiModal(true)} className="mb-4 text-xs font-bold text-rose-500">+ Tambah</button>{content.testimonials.map(t => (<div key={t.id} className="bg-white p-4 rounded-2xl mb-2"><p className="font-bold">{t.name}</p><p className="text-xs text-slate-500">{t.text}</p></div>))}</div>)}</div>)}
-        {(activeTab === 'history' || activeTab === 'losses') && (<div className="bg-white p-6 rounded-[32px]">{activeTab === 'history' ? historyTransactions.map(t=>(<div key={t.id} className="border-b py-2">{t.customer.name} - {t.status}</div>)) : losses.map(l=>(<div key={l.id}>{l.description}: {l.amount}</div>))}</div>)}
+        {(activeTab === 'history' || activeTab === 'losses') && (<div className="bg-white p-6 rounded-[32px]">{activeTab === 'history' ? historyTransactions.map((t: Transaction) =>(<div key={t.id} className="border-b py-2">{t.customer.name} - {t.status}</div>)) : losses.map(l=>(<div key={l.id}>{l.description}: {l.amount}</div>))}</div>)}
       </div>
 
-      {showProductModal && (<div className="fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center p-6"><div className="bg-white w-full max-w-md rounded-[32px] p-8"><input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Nama" /><input value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Harga" /><input type="file" onChange={e => handleProductImageUpload(e, 'img')} className="mb-4"/><button onClick={handleSaveProduct} disabled={isUploadingProductImg} className="w-full py-4 bg-rose-600 text-white rounded-2xl font-bold">Simpan</button><button onClick={() => setShowProductModal(false)} className="w-full py-4 text-slate-400 font-bold">Batal</button></div></div>)}
-      {showTestiModal && (<div className="fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center p-6"><div className="bg-white w-full max-w-md rounded-[32px] p-8"><input value={testiForm.name || ''} onChange={e => setTestiForm({...testiForm, name: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Nama" /><textarea value={testiForm.text || ''} onChange={e => setTestiForm({...testiForm, text: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Ulasan" /><button onClick={handleSaveTesti} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold">Simpan</button><button onClick={() => setShowTestiModal(false)} className="w-full py-4 text-slate-400 font-bold">Batal</button></div></div>)}
+      {showProductModal && (<div className="fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center p-6"><div className="bg-white w-full max-w-md rounded-[48px] p-8 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar"><h3 className="text-2xl font-black text-slate-800 mb-6">{editingProduct ? 'Edit Produk' : 'Tambah Produk'}</h3><div className="space-y-4"><input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Nama" /><input value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Harga" /><input type="file" onChange={e => handleProductImageUpload(e, 'img')} className="mb-4"/><button onClick={handleSaveProduct} disabled={isUploadingProductImg} className="w-full py-4 bg-rose-600 text-white rounded-2xl font-bold">Simpan</button><button onClick={() => setShowProductModal(false)} className="w-full py-4 text-slate-400 font-bold">Batal</button></div></div></div>)}
+      {showTestiModal && (<div className="fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center p-6"><div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95"><h3 className="text-xl font-black mb-4">Edit Testimoni</h3><div className="space-y-3"><input value={testiForm.name || ''} onChange={e => setTestiForm({...testiForm, name: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Nama" /><textarea value={testiForm.text || ''} onChange={e => setTestiForm({...testiForm, text: e.target.value})} className="w-full mb-4 p-4 bg-slate-50 rounded-2xl" placeholder="Ulasan" /><button onClick={handleSaveTesti} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold">Simpan</button><button onClick={() => setShowTestiModal(false)} className="w-full py-4 text-slate-400 font-bold">Batal</button></div></div></div>)}
       {showLossModal && (<div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6"><div className="bg-white w-full max-w-sm rounded-[48px] p-8 shadow-2xl animate-in slide-in-from-bottom-8 duration-500"><h3 className="text-2xl font-black text-slate-800 mb-6">Input Kerugian</h3><div className="space-y-4"><input type="number" placeholder="Nominal" value={lossForm.amt} onChange={e => setLossForm({...lossForm, amt: e.target.value})} className="w-full bg-slate-50 border-none rounded-2xl p-5 font-medium" /><input type="text" placeholder="Keterangan" value={lossForm.desc} onChange={e => setLossForm({...lossForm, desc: e.target.value})} className="w-full bg-slate-50 border-none rounded-2xl p-5 font-medium" /><button onClick={handleAddLoss} disabled={isGlobalLoading} className="w-full py-5 bg-amber-500 text-white rounded-3xl font-black shadow-xl mt-4 flex items-center justify-center">{isGlobalLoading ? <Loader2 className="animate-spin" size={20}/> : 'SIMPAN'}</button><button onClick={() => setShowLossModal(false)} className="w-full py-4 text-slate-400 font-bold">Batal</button></div></div></div>)}
       {showGalleryModal && (<div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6"><div className="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95"><h3 className="text-xl font-black mb-4">Upload Dokumentasi</h3><div className="space-y-4"><input type="text" placeholder="Judul Foto" className="w-full bg-slate-50 p-3 rounded-xl font-bold outline-none" value={galleryForm.title} onChange={e => setGalleryForm({...galleryForm, title: e.target.value})} /><label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50">{galleryForm.img ? <img src={galleryForm.img} className="h-full object-contain"/> : <div className="text-center text-slate-400"><UploadCloud className="mx-auto mb-2"/><span className="text-xs font-bold">Klik Upload</span></div>}<input type="file" className="hidden" onChange={handleGalleryImage} /></label><button onClick={handleSaveGallery} className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold">Simpan</button><button onClick={() => setShowGalleryModal(false)} className="w-full py-3 text-slate-400 font-bold">Batal</button></div></div></div>)}
       {showFaqModal && (<div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6"><div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95"><h3 className="text-xl font-black mb-4">Edit FAQ</h3><div className="space-y-3"><input type="text" placeholder="Pertanyaan (Q)" className="w-full bg-slate-50 p-3 rounded-xl font-bold outline-none" value={faqForm.q} onChange={e => setFaqForm({...faqForm, q: e.target.value})} /><textarea placeholder="Jawaban (A)" className="w-full bg-slate-50 p-3 rounded-xl font-medium outline-none h-32" value={faqForm.a} onChange={e => setFaqForm({...faqForm, a: e.target.value})} /><button onClick={handleSaveFaq} className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold">Simpan</button><button onClick={() => setShowFaqModal(false)} className="w-full py-3 text-slate-400 font-bold">Batal</button></div></div></div>)}
